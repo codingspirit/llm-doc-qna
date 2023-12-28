@@ -36,12 +36,13 @@ else:
     db = FAISS.load_local(base_path + db_name, embeddings)
 
 qa = RetrievalQA.from_chain_type(
-    llm=ChatOpenAI(), chain_type="stuff", retriever=db.as_retriever()
+    llm=ChatOpenAI(temperature = 0.0), chain_type="stuff", retriever=db.as_retriever()
 )
 
 while True:
     query = input('Type your query, or type "exit" to terminate: \n')
     if query == "exit":
         break
+
     result = qa.run(query)
     print(result)
