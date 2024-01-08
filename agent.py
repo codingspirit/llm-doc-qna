@@ -5,27 +5,51 @@
 
 from langchain.document_loaders import TextLoader
 from langchain.chat_models import ChatOpenAI
+from langchain.chat_models import BedrockChat
 from langchain.chains import RetrievalQA
 from langchain.embeddings import OpenAIEmbeddings
+from langchain.embeddings import BedrockEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import FAISS
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+
 
 from pathlib import Path
 import os
 import sys
 
-embeddings = OpenAIEmbeddings()
+# model_name = "gpt-3.5-turbo"
+model_name = "anthropic.claude-v2"
+
+if model_name == "anthropic.claude-v2":
+    embeddings = BedrockEmbeddings()
+    llm = BedrockChat(
+        model_id=model_name,
+        streaming=True,
+        callbacks=[StreamingStdOutCallbackHandler()],
+        model_kwargs={
+            "temperature": 0,
+        },
+    )
+
+else:
+    embeddings = OpenAIEmbeddings()
+    llm = ChatOpenAI(
+        model_name=model_name,
+        streaming=True,
+        callbacks=[StreamingStdOutCallbackHandler()],
+        temperature=0,
+    )
 
 doc_path = input("Please input doc path \n")
 db_name = Path(doc_path).stem + "_vdb"
-db_path = sys.path[0] + "/" + db_name
+db_path = sys.path[0] + "/" + model_name + "-vdb/" + db_name
 
 if not os.path.exists(db_path):
     print("No existing VDB found. Reading the doc...")
     loader = TextLoader(doc_path)
     documents = loader.load()
-    text_splitter = CharacterTextSplitter(chunk_size=1024, chunk_overlap=0)
+    text_splitter = CharacterTextSplitter(chunk_size=2048, chunk_overlap=0)
     texts = text_splitter.split_documents(documents)
     db = FAISS.from_documents(texts, embeddings)
     db.save_local(db_path)
@@ -34,18 +58,12 @@ else:
     print("Existing VDB found.")
     db = FAISS.load_local(db_path, embeddings)
 
-llm = ChatOpenAI(
-    streaming=True,
-    callbacks=[StreamingStdOutCallbackHandler()],
-    temperature=0,
-)
-
 qa = RetrievalQA.from_chain_type(
     llm=llm, chain_type="stuff", retriever=db.as_retriever()
 )
 
 while True:
-    query = input('\nType your query, or type "exit" to terminate: \n')
+    query = input('\nType your query, or type "exit" to terminate: \n\n')
     if query == "exit":
         break
     print("\nthinking...\n")
