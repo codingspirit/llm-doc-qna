@@ -3,7 +3,11 @@
 # @date 2023-12-27
 # @copyright Copyright (c) 2023
 
-from langchain.document_loaders import TextLoader
+from langchain.document_loaders import (
+    TextLoader,
+    UnstructuredMarkdownLoader,
+    UnstructuredPDFLoader,
+)
 from langchain.chat_models import ChatOpenAI
 from langchain.chat_models import BedrockChat
 from langchain.chains import RetrievalQA
@@ -42,12 +46,22 @@ else:
     )
 
 doc_path = input("Please input doc path \n")
-db_name = Path(doc_path).stem + "_vdb"
+doc_path = Path(doc_path)
+doc_extension = doc_path.suffix
+db_name = doc_path.stem + "_vdb"
 db_path = sys.path[0] + "/" + model_name + "-vdb/" + db_name
 
 if not os.path.exists(db_path):
     print("No existing VDB found. Reading the doc...")
-    loader = TextLoader(doc_path)
+    if doc_extension == ".txt":
+        loader = TextLoader(doc_path)
+    elif doc_extension == ".md":
+        loader = UnstructuredMarkdownLoader(doc_path)
+    elif doc_extension == ".pdf":
+        loader = UnstructuredPDFLoader(doc_path)
+    else:
+        raise ValueError(f"Unsupported file type {doc_extension}")
+
     documents = loader.load()
     text_splitter = CharacterTextSplitter(chunk_size=2048, chunk_overlap=0)
     texts = text_splitter.split_documents(documents)
