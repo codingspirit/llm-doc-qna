@@ -22,6 +22,8 @@ from pathlib import Path
 import os
 import sys
 
+sys.stdin.reconfigure(encoding="utf-8")
+
 # model_name = "gpt-3.5-turbo"
 model_name = "anthropic.claude-v2"
 
