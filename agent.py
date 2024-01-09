@@ -13,7 +13,7 @@ from langchain.chat_models import BedrockChat
 from langchain.chains import RetrievalQA
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.embeddings import BedrockEmbeddings
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import CharacterTextSplitter, MarkdownTextSplitter
 from langchain.vectorstores import FAISS
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
@@ -21,6 +21,8 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from pathlib import Path
 import os
 import sys
+
+sys.stdin.reconfigure(encoding="utf-8")
 
 # model_name = "gpt-3.5-turbo"
 model_name = "anthropic.claude-v2"
@@ -32,7 +34,8 @@ if model_name == "anthropic.claude-v2":
         streaming=True,
         callbacks=[StreamingStdOutCallbackHandler()],
         model_kwargs={
-            "temperature": 0,
+            "temperature": 0.0,
+            "max_tokens_to_sample": 4096,
         },
     )
 
@@ -63,9 +66,13 @@ if not os.path.exists(db_path):
         raise ValueError(f"Unsupported file type {doc_extension}")
 
     documents = loader.load()
-    text_splitter = CharacterTextSplitter(chunk_size=2048, chunk_overlap=0)
-    texts = text_splitter.split_documents(documents)
-    db = FAISS.from_documents(texts, embeddings)
+    if doc_extension == ".md":
+        text_splitter = MarkdownTextSplitter(chunk_size=2048, chunk_overlap=0)
+    else:
+        text_splitter = CharacterTextSplitter(chunk_size=2048, chunk_overlap=0)
+
+    text_chunks = text_splitter.split_documents(documents)
+    db = FAISS.from_documents(text_chunks, embeddings)
     db.save_local(db_path)
     print("Finished")
 else:
