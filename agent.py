@@ -3,20 +3,19 @@
 # @date 2023-12-27
 # @copyright Copyright (c) 2023
 
-from langchain.document_loaders import (
+from langchain.text_splitter import CharacterTextSplitter, MarkdownTextSplitter
+from langchain.chains import RetrievalQA
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain_community.document_loaders import (
     TextLoader,
     UnstructuredMarkdownLoader,
     UnstructuredPDFLoader,
 )
-from langchain.chat_models import ChatOpenAI
-from langchain.chat_models import BedrockChat
-from langchain.chains import RetrievalQA
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.embeddings import BedrockEmbeddings
-from langchain.text_splitter import CharacterTextSplitter, MarkdownTextSplitter
-from langchain.vectorstores import FAISS
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-
+from langchain_community.chat_models import ChatOpenAI
+from langchain_community.chat_models import BedrockChat
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_community.embeddings import BedrockEmbeddings
+from langchain_community.vectorstores import FAISS
 
 from pathlib import Path
 import os
@@ -24,8 +23,8 @@ import sys
 
 sys.stdin.reconfigure(encoding="utf-8")
 
-# model_name = "gpt-3.5-turbo"
-model_name = "anthropic.claude-v2"
+model_name = "gpt-3.5-turbo"
+# model_name = "anthropic.claude-v2"
 
 if model_name == "anthropic.claude-v2":
     embeddings = BedrockEmbeddings()
@@ -80,7 +79,9 @@ else:
     db = FAISS.load_local(db_path, embeddings)
 
 qa = RetrievalQA.from_chain_type(
-    llm=llm, chain_type="stuff", retriever=db.as_retriever()
+    llm=llm,
+    chain_type="stuff",
+    retriever=db.as_retriever(),
 )
 
 while True:
@@ -88,5 +89,5 @@ while True:
     if query == "exit":
         break
     print("\nthinking...\n")
-    qa.run(query)
+    qa.invoke(query)
     print("\n")
